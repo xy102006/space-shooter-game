@@ -1,0 +1,29 @@
+{
+  "name": "warped-space-shooter",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:phase1": "vitest run tests/unit/phase1 && playwright test tests/e2e/phase1",
+    "test:phase2": "vitest run tests/unit/phase2 && playwright test tests/e2e/phase2",
+    "test:phase3": "vitest run tests/unit/phase3 && playwright test tests/e2e/phase3",
+    "test:phase4": "vitest run tests/unit/phase4 && playwright test tests/e2e/phase4"
+  },
+  "dependencies": {
+    "phaser": "^3.87.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@vitest/coverage-v8": "^4.1.8",
+    "playwright": "^1.60.0",
+    "vite": "^5.4.0",
+    "vitest": "^4.1.8"
+  }
+}
