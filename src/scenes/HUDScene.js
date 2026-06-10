@@ -99,17 +99,18 @@ export default class HUDScene extends Phaser.Scene {
     this._levelTxt.setText(`LEVEL ${this.registry.get('level') || 1}`);
     this._buildHpPips(5, 5);
 
-    this._pauseBtn = null;
-    this._bombBtn  = null;
-    if (this.sys.game.device.input.touch) {
-      this._createTouchButtons();
-    }
+    this._pauseBtn  = null;
+    this._bombBtn   = null;
+    this._bombBg    = null;
+    this._bombLabel = null;
+    this._createTouchButtons();
   }
 
   _createTouchButtons() {
     const game = this.scene.get('GameScene');
 
-    // PAUSE — top-right, larger hit area
+    // ── PAUSE button — top-right ──────────────────────────────────────────────
+    // ⏸ is standard Unicode (not emoji) — renders reliably on all platforms
     const pauseBtn = this.add.text(460, 14, '⏸', {
       font: 'bold 22px monospace', fill: '#ffffff',
       stroke: '#000000', strokeThickness: 4,
@@ -118,23 +119,44 @@ export default class HUDScene extends Phaser.Scene {
       .setInteractive(new Phaser.Geom.Rectangle(-24, -18, 52, 44), Phaser.Geom.Rectangle.Contains);
     pauseBtn.on('pointerdown', () => game.togglePause());
 
-    // BOMB — large emoji, bottom-right, anchored inside the joystick exclusion zone (x≥360, y≥520)
-    const bombBtn = this.add.text(420, 570, '💣', {
-      font: 'bold 44px monospace',
-    })
-      .setOrigin(0.5).setDepth(DEPTHS.HUD + 1)
-      .setInteractive(new Phaser.Geom.Rectangle(-44, -44, 88, 88), Phaser.Geom.Rectangle.Contains);
-    bombBtn.on('pointerdown', () => game.dropBomb());
+    // ── BOMB button — Phaser Graphics rectangle + plain ASCII text ────────────
+    // No emoji. add.graphics() is a pure canvas draw — no font dependency,
+    // renders identically on every platform including iOS Safari.
+    // Anchored inside joystick exclusion zone (x≥360, y≥520).
+    const bombBg = this.add.graphics().setDepth(DEPTHS.HUD + 1);
+    const _drawBombBg = (alpha) => {
+      bombBg.clear();
+      bombBg.fillStyle(0xff5500, alpha);
+      bombBg.fillRoundedRect(376, 530, 88, 72, 10);
+      bombBg.lineStyle(2, 0xffffff, 0.5);
+      bombBg.strokeRoundedRect(376, 530, 88, 72, 10);
+    };
+    _drawBombBg(0.88);
 
-    // Dim when out of bombs
-    const initBombs = this.registry.get('bombs') || 0;
-    bombBtn.setAlpha(initBombs > 0 ? 1 : 0.3);
-    game.events.on('bombsChanged', (v) => {
-      if (this._bombBtn) this._bombBtn.setAlpha(v > 0 ? 1 : 0.3);
-    }, this);
+    const bombLabel = this.add.text(420, 566, 'BOMB', {
+      font: 'bold 20px monospace', fill: '#ffffff',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(DEPTHS.HUD + 2);
 
-    this._pauseBtn = pauseBtn;
-    this._bombBtn  = bombBtn;
+    // Invisible interactive zone over the rectangle
+    const bombHit = this.add.zone(420, 566, 88, 72)
+      .setOrigin(0.5).setDepth(DEPTHS.HUD + 2)
+      .setInteractive();
+    bombHit.on('pointerdown', () => game.dropBomb());
+
+    // Dim background + label when out of bombs
+    const applyBombAlpha = (v) => {
+      const a = v > 0 ? 0.88 : 0.3;
+      _drawBombBg(a);
+      if (this._bombLabel) this._bombLabel.setAlpha(v > 0 ? 1 : 0.35);
+    };
+    applyBombAlpha(this.registry.get('bombs') || 0);
+    game.events.on('bombsChanged', applyBombAlpha, this);
+
+    this._pauseBtn  = pauseBtn;
+    this._bombBtn   = bombHit;
+    this._bombBg    = bombBg;
+    this._bombLabel = bombLabel;
   }
 
   _buildLives(count) {
@@ -270,8 +292,10 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   shutdown() {
-    if (this._pauseBtn) { this._pauseBtn.destroy(); this._pauseBtn = null; }
-    if (this._bombBtn)  { this._bombBtn.destroy();  this._bombBtn  = null; }
+    if (this._pauseBtn)  { this._pauseBtn.destroy();  this._pauseBtn  = null; }
+    if (this._bombBtn)   { this._bombBtn.destroy();   this._bombBtn   = null; }
+    if (this._bombBg)    { this._bombBg.destroy();    this._bombBg    = null; }
+    if (this._bombLabel) { this._bombLabel.destroy(); this._bombLabel = null; }
     const gameScene = this.scene.get('GameScene');
     if (!gameScene?.events) return;
     ['scoreChanged', 'livesChanged', 'powerupActivated', 'bossHealthChanged',

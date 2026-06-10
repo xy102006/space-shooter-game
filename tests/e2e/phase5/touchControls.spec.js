@@ -246,8 +246,8 @@ test.describe('touch controls — mobile viewport', () => {
 test.describe('touch controls — desktop viewport (no touch)', () => {
   test.use({ viewport: { width: 1280, height: 720 }, hasTouch: false });
 
-  // OUTLIER 3: No touch buttons on desktop
-  test('BOMB and PAUSE touch buttons are absent on desktop', async ({ page }) => {
+  // OUTLIER 3: Buttons exist on desktop too (always created, keyboard users can ignore them)
+  test('BOMB and PAUSE buttons exist on desktop', async ({ page }) => {
     await startGameAtLevel(page);
     await page.waitForTimeout(800);
 
@@ -259,8 +259,8 @@ test.describe('touch controls — desktop viewport (no touch)', () => {
       };
     });
 
-    expect(result.hasBombBtn).toBe(false);
-    expect(result.hasPauseBtn).toBe(false);
+    expect(result.hasBombBtn).toBe(true);
+    expect(result.hasPauseBtn).toBe(true);
   });
 
   // OUTLIER 4: Joystick graphics absent on desktop
