@@ -29,6 +29,8 @@ export default class GameScene extends Phaser.Scene {
     this.shipConfig = data.shipConfig || null;
     this.difficulty = data.difficulty || 'normal';
     this._boss      = null;
+    this._player        = null;
+    this._touchControls = null;
 
     this.registry.set('score',      data.score || 0);
     this.registry.set('lives',      data.lives || 3);
@@ -370,9 +372,15 @@ export default class GameScene extends Phaser.Scene {
 
   shutdown() {
     if (this._touchControls) { this._touchControls.destroy(); this._touchControls = null; }
-    // Clear all scene-level event listeners so Level N listeners don't accumulate
-    // into Level N+1 when the same GameScene instance restarts.
-    this.events.removeAllListeners();
+    // Remove only the specific user-defined listeners we added in create().
+    // DO NOT call removeAllListeners() — scene.events === scene.sys.events, so that
+    // would destroy Phaser's InputPlugin START subscription and break Level 2 input.
+    this.events.off('comboChanged');
+    this.events.off('frenzyStart');
+    this.events.off('frenzyEnd');
+    this.events.off('playerShoot');
+    this.events.off('tryDropPowerup');
+    this.events.off('spawnEnemy');
   }
 
   destroy() {
