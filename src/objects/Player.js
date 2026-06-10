@@ -24,6 +24,10 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     this._blinkTimer  = null;
     this._iFrameTimer = null;
     this._thrustEmitter = null;
+    // Touch velocity and auto-fire — defaults so update() works before TouchControls attaches
+    this._touchVelX = 0;
+    this._touchVelY = 0;
+    this._autoFire  = false;
 
     this.setDepth(8);
     this.setScale(1.5);
@@ -118,9 +122,9 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
       this._shieldGraphic.clear();
     }
 
-    // Shooting
-    const isTouchDevice = this.scene.sys.game.device.input.touch;
-    if ((this.fireKey.isDown || (isTouchDevice && this._autoFire)) && time > this._lastFired + this.fireRate) {
+    // Shooting — _autoFire is set by TouchControls only on genuine touch events
+    // (mouse pointerType is filtered in TouchControls._onDown), so no device detection needed.
+    if ((this.fireKey.isDown || this._autoFire) && time > this._lastFired + this.fireRate) {
       this._shoot(bulletGroup);
       this._lastFired = time;
     }

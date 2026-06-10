@@ -39,16 +39,17 @@ test.describe('touch controls — mobile viewport', () => {
     expect(hasPauseBtn).toBe(true);
   });
 
-  // HAPPY PATH 3: Joystick starts hidden
-  test('joystick graphics object created and initially hidden', async ({ page }) => {
+  // HAPPY PATH 3: Joystick graphic absent before first touch (lazy creation)
+  test('joystick graphics object is null before first touch', async ({ page }) => {
     await startGameAtLevel(page);
     await page.waitForTimeout(800);
 
-    const joyAlpha = await page.evaluate(() => {
+    const hasJoyGfx = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('GameScene');
-      return gs?._touchControls?._joyGfx?.alpha ?? -1;
+      return gs?._touchControls?._joyGfx != null;
     });
-    expect(joyAlpha).toBe(0);
+    // Lazy: graphics object created only on first touch event, not at construction
+    expect(hasJoyGfx).toBe(false);
   });
 
   // HAPPY PATH 4: Joystick appears on left-half touch
@@ -226,6 +227,57 @@ test.describe('touch controls — mobile viewport', () => {
     });
   });
 
+  // HAPPY PATH 10: Joystick and BOMB both work after Level 2 transition
+  test('joystick and BOMB button work in Level 2 after scene restart', async ({ page }) => {
+    await startGameAtLevel(page);
+    await page.waitForTimeout(800);
+
+    // Simulate LevelClearScene → Level 2 transition programmatically
+    await page.evaluate(() => {
+      const gs = window.game?.scene?.getScene('GameScene');
+      const sc = gs?._player?.shipConfig;
+      window.game.scene.stop('HUDScene');
+      window.game.scene.start('GameScene', {
+        level: 2, score: 0, lives: 3, bombs: 2,
+        difficulty: 'normal', shipConfig: sc,
+      });
+    });
+    await page.waitForTimeout(1200); // wait for Level 2 create() and HUDScene relaunch
+
+    // Verify _touchControls exists in Level 2
+    const hasTouchControls = await page.evaluate(() => {
+      return window.game?.scene?.getScene('GameScene')?._touchControls != null;
+    });
+    expect(hasTouchControls).toBe(true);
+
+    // Verify joystick activates on touch
+    const { box, scaleX, scaleY } = await getCanvasScale(page);
+    await page.locator('canvas').dispatchEvent('pointerdown', {
+      clientX: box.x + 100 * scaleX,
+      clientY: box.y + 400 * scaleY,
+      pointerId: 1, pointerType: 'touch',
+      isPrimary: true, pressure: 1, bubbles: true, cancelable: true,
+    });
+    await page.waitForTimeout(100);
+
+    const leftIdSet = await page.evaluate(() => {
+      return window.game?.scene?.getScene('GameScene')?._touchControls?._leftId != null;
+    });
+    expect(leftIdSet).toBe(true);
+
+    await page.locator('canvas').dispatchEvent('pointerup', {
+      clientX: box.x + 100 * scaleX,
+      clientY: box.y + 400 * scaleY,
+      pointerId: 1, pointerType: 'touch', bubbles: true,
+    });
+
+    // Verify BOMB button exists in Level 2 HUD
+    const hasBombBtn = await page.evaluate(() => {
+      return window.game?.scene?.getScene('HUDScene')?._bombBtn?.active === true;
+    });
+    expect(hasBombBtn).toBe(true);
+  });
+
   // OUTLIER 2: BOMB button dimmed when bomb count is 0
   test('BOMB button is dimmed when bomb count is 0', async ({ page }) => {
     await startGameAtLevel(page);
@@ -263,10 +315,25 @@ test.describe('touch controls — desktop viewport (no touch)', () => {
     expect(result.hasPauseBtn).toBe(true);
   });
 
-  // OUTLIER 4: Joystick graphics absent on desktop
-  test('joystick graphics object is not created on desktop', async ({ page }) => {
+  // OUTLIER 4: Joystick graphics absent on desktop (mouse pointer filtered, lazy never triggers)
+  test('joystick graphics object is not created on desktop after mouse click', async ({ page }) => {
     await startGameAtLevel(page);
     await page.waitForTimeout(800);
+
+    // Simulate a desktop mouse click — should NOT activate the joystick
+    const box = await page.locator('canvas').boundingBox();
+    await page.locator('canvas').dispatchEvent('pointerdown', {
+      clientX: box.x + box.width / 2,
+      clientY: box.y + box.height / 2,
+      pointerId: 1, pointerType: 'mouse',
+      isPrimary: true, pressure: 0.5, bubbles: true,
+    });
+    await page.waitForTimeout(100);
+    await page.locator('canvas').dispatchEvent('pointerup', {
+      clientX: box.x + box.width / 2,
+      clientY: box.y + box.height / 2,
+      pointerId: 1, pointerType: 'mouse', bubbles: true,
+    });
 
     const hasJoyGfx = await page.evaluate(() => {
       const gs = window.game?.scene?.getScene('GameScene');

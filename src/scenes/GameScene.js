@@ -192,10 +192,17 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    this._touchControls = new TouchControls(this, this._player);
-    console.log('[GameScene] create() complete, level=', this.level);
+    console.log('[GameScene] create() try-block complete, level=', this.level);
     } catch (err) {
       console.error('[GameScene] create() THREW:', err);
+    }
+    // TouchControls lives OUTSIDE the try/catch — touch must always work even
+    // if earlier setup throws.  Guard on _player in case Player itself failed.
+    if (this._player && !this._touchControls) {
+      this._touchControls = new TouchControls(this, this._player);
+      console.log('[GameScene] TouchControls created, level=', this.level);
+    } else if (!this._player) {
+      console.error('[GameScene] _player is null — TouchControls skipped');
     }
   }
 
@@ -363,6 +370,9 @@ export default class GameScene extends Phaser.Scene {
 
   shutdown() {
     if (this._touchControls) { this._touchControls.destroy(); this._touchControls = null; }
+    // Clear all scene-level event listeners so Level N listeners don't accumulate
+    // into Level N+1 when the same GameScene instance restarts.
+    this.events.removeAllListeners();
   }
 
   destroy() {

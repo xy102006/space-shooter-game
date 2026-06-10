@@ -29,15 +29,22 @@ export default class TouchControls {
     scene.input.on('pointerup',     this._onUp,    this);
     scene.input.on('pointercancel', this._onUp,    this);
 
-    this._drawJoystick = scene.sys.game.device.input.touch;
-    if (this._drawJoystick) {
-      this._joyGfx = scene.add.graphics().setDepth(50).setAlpha(0);
-    }
+    // Joystick graphic created lazily on first touch (_onDown) so we never rely
+    // on the unreliable device.input.touch flag (iPhone Safari returns false).
+    this._drawJoystick = false;
+    this._joyGfx = null;
   }
 
   _onDown(pointer) {
+    // Ignore desktop mouse clicks — only activate joystick for touch/pen input
+    if (pointer.pointerType === 'mouse') return;
     if (inBombZone(pointer.x, pointer.y)) return;
     if (this._leftId !== null) return;
+    // Lazily create the joystick ring on first touch — avoids device.input.touch
+    if (!this._joyGfx) {
+      this._joyGfx = this.scene.add.graphics().setDepth(50).setAlpha(0);
+      this._drawJoystick = true;
+    }
     this._leftId  = pointer.id;
     this._originX = pointer.x;
     this._originY = pointer.y;
