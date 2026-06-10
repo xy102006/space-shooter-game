@@ -109,30 +109,28 @@ export default class HUDScene extends Phaser.Scene {
   _createTouchButtons() {
     const game = this.scene.get('GameScene');
 
-    // PAUSE — x=468 sits just right of the rightmost life icon at x=460
-    const pauseBtn = this.add.text(468, 10, '⏸', {
-      font: 'bold 16px monospace', fill: '#ffffff',
-      stroke: '#000000', strokeThickness: 3,
-    })
-      .setOrigin(0.5).setDepth(DEPTHS.HUD + 1).setAlpha(0.8)
-      .setInteractive(new Phaser.Geom.Rectangle(-18, -12, 40, 36), Phaser.Geom.Rectangle.Contains);
-    pauseBtn.on('pointerdown', () => game.togglePause());
-
-    // BOMB — bottom-right, opposite the bomb count text at bottom-left
-    const bombBtn = this.add.text(430, 578, 'BOMB', {
-      font: 'bold 13px monospace', fill: '#ffaa00',
-      stroke: '#000000', strokeThickness: 3,
-      backgroundColor: '#00000066', padding: { x: 8, y: 5 },
+    // PAUSE — top-right, larger hit area
+    const pauseBtn = this.add.text(460, 14, '⏸', {
+      font: 'bold 22px monospace', fill: '#ffffff',
+      stroke: '#000000', strokeThickness: 4,
     })
       .setOrigin(0.5).setDepth(DEPTHS.HUD + 1).setAlpha(0.85)
-      .setInteractive(new Phaser.Geom.Rectangle(-30, -25, 80, 55), Phaser.Geom.Rectangle.Contains);
+      .setInteractive(new Phaser.Geom.Rectangle(-24, -18, 52, 44), Phaser.Geom.Rectangle.Contains);
+    pauseBtn.on('pointerdown', () => game.togglePause());
+
+    // BOMB — large emoji, bottom-right, anchored inside the joystick exclusion zone (x≥360, y≥520)
+    const bombBtn = this.add.text(420, 570, '💣', {
+      font: 'bold 44px monospace',
+    })
+      .setOrigin(0.5).setDepth(DEPTHS.HUD + 1)
+      .setInteractive(new Phaser.Geom.Rectangle(-44, -44, 88, 88), Phaser.Geom.Rectangle.Contains);
     bombBtn.on('pointerdown', () => game.dropBomb());
 
-    // Dim when no bombs available
-    const bombs = this.registry.get('bombs') || 0;
-    bombBtn.setAlpha(bombs > 0 ? 0.85 : 0.35);
+    // Dim when out of bombs
+    const initBombs = this.registry.get('bombs') || 0;
+    bombBtn.setAlpha(initBombs > 0 ? 1 : 0.3);
     game.events.on('bombsChanged', (v) => {
-      if (this._bombBtn) this._bombBtn.setAlpha(v > 0 ? 0.85 : 0.35);
+      if (this._bombBtn) this._bombBtn.setAlpha(v > 0 ? 1 : 0.3);
     }, this);
 
     this._pauseBtn = pauseBtn;

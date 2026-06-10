@@ -35,6 +35,9 @@ const config = {
     VictoryScene,
     LevelClearScene
   ],
+  input: {
+    activePointers: 3
+  },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH

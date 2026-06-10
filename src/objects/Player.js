@@ -119,7 +119,8 @@ export default class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     // Shooting
-    if ((this.fireKey.isDown || this._touchFire) && time > this._lastFired + this.fireRate) {
+    const isTouchDevice = this.scene.sys.game.device.input.touch;
+    if ((this.fireKey.isDown || (isTouchDevice && this._autoFire)) && time > this._lastFired + this.fireRate) {
       this._shoot(bulletGroup);
       this._lastFired = time;
     }

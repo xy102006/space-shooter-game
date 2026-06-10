@@ -1,22 +1,28 @@
 import { GAME_WIDTH } from '../constants.js';
 import { thumbOffset } from '../utils/joystickCalc.js';
 
+// Bottom-right exclusion zone — taps here go to the BOMB button, not the joystick
+const BOMB_ZONE_X = 360;
+const BOMB_ZONE_Y = 520;
+
+function inBombZone(x, y) {
+  return x >= BOMB_ZONE_X && y >= BOMB_ZONE_Y;
+}
+
 export default class TouchControls {
   constructor(scene, player) {
     this.scene  = scene;
     this.player = player;
 
     this._leftId  = null;
-    this._rightId = null;
     this._originX = 0;
     this._originY = 0;
     this._velX = 0;
     this._velY = 0;
-    this._firing = false;
 
     player._touchVelX = 0;
     player._touchVelY = 0;
-    player._touchFire = false;
+    player._autoFire  = false;
 
     scene.input.on('pointerdown',   this._onDown,  this);
     scene.input.on('pointermove',   this._onMove,  this);
@@ -30,18 +36,13 @@ export default class TouchControls {
   }
 
   _onDown(pointer) {
-    if (pointer.x < GAME_WIDTH / 2) {
-      if (this._leftId !== null) return;
-      this._leftId  = pointer.id;
-      this._originX = pointer.x;
-      this._originY = pointer.y;
-      this._velX = 0;
-      this._velY = 0;
-    } else {
-      if (this._rightId !== null) return;
-      this._rightId = pointer.id;
-      this._firing  = true;
-    }
+    if (inBombZone(pointer.x, pointer.y)) return;
+    if (this._leftId !== null) return;
+    this._leftId  = pointer.id;
+    this._originX = pointer.x;
+    this._originY = pointer.y;
+    this._velX = 0;
+    this._velY = 0;
     this._sync();
   }
 
@@ -49,10 +50,9 @@ export default class TouchControls {
     if (pointer.id !== this._leftId) return;
     const dx = pointer.x - this._originX;
     const dy = pointer.y - this._originY;
-    const deadzone = 12;
     const speed = this.player.speed;
     const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < deadzone) {
+    if (len < 12) {
       this._velX = 0;
       this._velY = 0;
     } else {
@@ -69,17 +69,13 @@ export default class TouchControls {
       this._velX   = 0;
       this._velY   = 0;
     }
-    if (pointer.id === this._rightId) {
-      this._rightId = null;
-      this._firing  = false;
-    }
     this._sync();
   }
 
   _sync() {
     this.player._touchVelX = this._velX;
     this.player._touchVelY = this._velY;
-    this.player._touchFire = this._firing;
+    this.player._autoFire  = (this._leftId !== null);
     this._renderJoystick();
   }
 
@@ -89,13 +85,11 @@ export default class TouchControls {
     g.clear();
     if (this._leftId === null) { g.setAlpha(0); return; }
     g.setAlpha(1);
-    // base ring
-    g.lineStyle(3, 0xffffff, 0.35);
-    g.strokeCircle(this._originX, this._originY, 60);
-    // thumb dot
-    const { dx, dy } = thumbOffset(this._velX, this._velY, this.player?.speed || 220, 60);
-    g.fillStyle(0xffffff, 0.55);
-    g.fillCircle(this._originX + dx, this._originY + dy, 25);
+    g.lineStyle(4, 0xffffff, 0.4);
+    g.strokeCircle(this._originX, this._originY, 70);
+    const { dx, dy } = thumbOffset(this._velX, this._velY, this.player?.speed || 220, 70);
+    g.fillStyle(0xffffff, 0.6);
+    g.fillCircle(this._originX + dx, this._originY + dy, 30);
   }
 
   destroy() {
