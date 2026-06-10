@@ -98,6 +98,45 @@ export default class HUDScene extends Phaser.Scene {
     this._bombTxt.setText(`BOMB: ${this.registry.get('bombs') || 0}`);
     this._levelTxt.setText(`LEVEL ${this.registry.get('level') || 1}`);
     this._buildHpPips(5, 5);
+
+    this._pauseBtn = null;
+    this._bombBtn  = null;
+    if (this.sys.game.device.input.touch) {
+      this._createTouchButtons();
+    }
+  }
+
+  _createTouchButtons() {
+    const game = this.scene.get('GameScene');
+
+    // PAUSE — x=468 sits just right of the rightmost life icon at x=460
+    const pauseBtn = this.add.text(468, 10, '⏸', {
+      font: 'bold 16px monospace', fill: '#ffffff',
+      stroke: '#000000', strokeThickness: 3,
+    })
+      .setOrigin(0.5).setDepth(DEPTHS.HUD + 1).setAlpha(0.8)
+      .setInteractive(new Phaser.Geom.Rectangle(-18, -12, 40, 36), Phaser.Geom.Rectangle.Contains);
+    pauseBtn.on('pointerdown', () => game.togglePause());
+
+    // BOMB — bottom-right, opposite the bomb count text at bottom-left
+    const bombBtn = this.add.text(430, 578, 'BOMB', {
+      font: 'bold 13px monospace', fill: '#ffaa00',
+      stroke: '#000000', strokeThickness: 3,
+      backgroundColor: '#00000066', padding: { x: 8, y: 5 },
+    })
+      .setOrigin(0.5).setDepth(DEPTHS.HUD + 1).setAlpha(0.85)
+      .setInteractive(new Phaser.Geom.Rectangle(-30, -25, 80, 55), Phaser.Geom.Rectangle.Contains);
+    bombBtn.on('pointerdown', () => game.dropBomb());
+
+    // Dim when no bombs available
+    const bombs = this.registry.get('bombs') || 0;
+    bombBtn.setAlpha(bombs > 0 ? 0.85 : 0.35);
+    game.events.on('bombsChanged', (v) => {
+      if (this._bombBtn) this._bombBtn.setAlpha(v > 0 ? 0.85 : 0.35);
+    }, this);
+
+    this._pauseBtn = pauseBtn;
+    this._bombBtn  = bombBtn;
   }
 
   _buildLives(count) {
@@ -233,6 +272,8 @@ export default class HUDScene extends Phaser.Scene {
   }
 
   shutdown() {
+    if (this._pauseBtn) { this._pauseBtn.destroy(); this._pauseBtn = null; }
+    if (this._bombBtn)  { this._bombBtn.destroy();  this._bombBtn  = null; }
     const gameScene = this.scene.get('GameScene');
     if (!gameScene?.events) return;
     ['scoreChanged', 'livesChanged', 'powerupActivated', 'bossHealthChanged',

@@ -1,4 +1,5 @@
 import { GAME_WIDTH } from '../constants.js';
+import { thumbOffset } from '../utils/joystickCalc.js';
 
 export default class TouchControls {
   constructor(scene, player) {
@@ -21,6 +22,11 @@ export default class TouchControls {
     scene.input.on('pointermove',   this._onMove,  this);
     scene.input.on('pointerup',     this._onUp,    this);
     scene.input.on('pointercancel', this._onUp,    this);
+
+    this._drawJoystick = scene.sys.game.device.input.touch;
+    if (this._drawJoystick) {
+      this._joyGfx = scene.add.graphics().setDepth(50).setAlpha(0);
+    }
   }
 
   _onDown(pointer) {
@@ -74,6 +80,22 @@ export default class TouchControls {
     this.player._touchVelX = this._velX;
     this.player._touchVelY = this._velY;
     this.player._touchFire = this._firing;
+    this._renderJoystick();
+  }
+
+  _renderJoystick() {
+    if (!this._drawJoystick) return;
+    const g = this._joyGfx;
+    g.clear();
+    if (this._leftId === null) { g.setAlpha(0); return; }
+    g.setAlpha(1);
+    // base ring
+    g.lineStyle(3, 0xffffff, 0.35);
+    g.strokeCircle(this._originX, this._originY, 60);
+    // thumb dot
+    const { dx, dy } = thumbOffset(this._velX, this._velY, this.player?.speed || 220, 60);
+    g.fillStyle(0xffffff, 0.55);
+    g.fillCircle(this._originX + dx, this._originY + dy, 25);
   }
 
   destroy() {
@@ -81,5 +103,6 @@ export default class TouchControls {
     this.scene.input.off('pointermove',   this._onMove, this);
     this.scene.input.off('pointerup',     this._onUp,   this);
     this.scene.input.off('pointercancel', this._onUp,   this);
+    if (this._joyGfx) { this._joyGfx.destroy(); this._joyGfx = null; }
   }
 }

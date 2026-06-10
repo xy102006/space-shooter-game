@@ -131,7 +131,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     // Bomb key
-    this._player.bombKey.on('down', () => this._triggerBomb());
+    this._player.bombKey.on('down', () => this.dropBomb());
 
     // Wave manager
     this._waveMgr = new WaveManager(
@@ -172,12 +172,7 @@ export default class GameScene extends Phaser.Scene {
     } catch (_) {}
 
     // Pause on P
-    this.input.keyboard.on('keydown-P', () => {
-      if (this.scene.isActive('PauseScene')) return;
-      this.scene.pause('HUDScene');
-      this.scene.pause();
-      this.scene.launch('PauseScene');
-    });
+    this.input.keyboard.on('keydown-P', () => this.togglePause());
 
     // DEV: backtick = instant level clear
     this.input.keyboard.on('keydown-BACKTICK', () => {
@@ -197,7 +192,7 @@ export default class GameScene extends Phaser.Scene {
       }
     });
 
-    this._touch = new TouchControls(this, this._player);
+    this._touchControls = new TouchControls(this, this._player);
     console.log('[GameScene] create() complete, level=', this.level);
     } catch (err) {
       console.error('[GameScene] create() THREW:', err);
@@ -321,6 +316,19 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-M',     goMenu);
   }
 
+  // ── Public methods for touch button wiring ────────────────────────────────
+
+  dropBomb() {
+    this._triggerBomb();
+  }
+
+  togglePause() {
+    if (this.scene.isActive('PauseScene')) return;
+    this.scene.pause('HUDScene');
+    this.scene.pause();
+    this.scene.launch('PauseScene');
+  }
+
   // ── Bomb ──────────────────────────────────────────────────────────────────
 
   _triggerBomb() {
@@ -354,11 +362,11 @@ export default class GameScene extends Phaser.Scene {
   // ── Shutdown ──────────────────────────────────────────────────────────────
 
   shutdown() {
-    if (this._touch) { this._touch.destroy(); this._touch = null; }
+    if (this._touchControls) { this._touchControls.destroy(); this._touchControls = null; }
   }
 
   destroy() {
-    if (this._touch) { this._touch.destroy(); this._touch = null; }
+    if (this._touchControls) { this._touchControls.destroy(); this._touchControls = null; }
     super.destroy();
   }
 
